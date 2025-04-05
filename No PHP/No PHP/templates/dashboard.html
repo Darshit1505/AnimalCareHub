@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% set page_active = 'dashboard' %} {# Corrected page identifier #}
+{% block body_class %}dashboard-page bg-light{% endblock %}
+
+{% block title %}Dashboard - Pet's Paalan{% endblock %}
+
+{% block head %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 dashboard-container">
+
+    {# Flash messages are handled in base.html #}
+    {# Specific Error Message Area (kept from previous version) #}
+    {% if error is defined and error %}
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <h1 class="display-6 text-center mb-4">Welcome, {{ session.username }}!</h1>
+
+    {# Quick Actions #}
+    <div class="dashboard-section quick-actions text-center mb-4 card card-body shadow-sm">
+        <h2 class="h5 mb-3"><i class="fas fa-bolt me-2"></i>Quick Actions</h2>
+        <a href="{{ url_for('adoption_page') }}#post-form-section" class="btn btn-primary btn-sm m-1"><i class="fas fa-plus-circle me-1"></i> Post Animal</a>
+        <a href="{{ url_for('adoption_page') }}" class="btn btn-info btn-sm m-1"><i class="fas fa-paw me-1"></i> View Animals</a>
+        <a href="{{ url_for('donate_page') }}" class="btn btn-success btn-sm m-1"><i class="fas fa-hand-holding-heart me-1"></i> Donate</a>
+         <a href="{{ url_for('rescue_page') }}" class="btn btn-warning btn-sm m-1"><i class="fas fa-first-aid me-1"></i> Report Rescue</a>
+    </div>
+
+    <div class="row g-4"> {# Grid for dashboard sections #}
+        {# Animals You've Posted #}
+        <div class="col-lg-12">
+            <div class="dashboard-section card shadow-sm">
+                 <div class="card-header bg-light border-bottom">
+                    <h2 class="h5 mb-0"><i class="fas fa-list-ul me-2 text-primary"></i>Animals You've Posted</h2>
+                 </div>
+                 <div class="card-body">
+                    {% if animals_posted is defined and animals_posted %}
+                        <ul class="list-group list-group-flush item-list">
+                            {% for animal in animals_posted %}
+                                <li class="list-group-item px-0 py-3" id="animal-{{ animal.animal_id }}">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-start mb-2">
+                                        <div class="item-details">
+                                            <i class="fas fa-paw text-info"></i>
+                                            <strong class="me-2">{{ animal.name }}</strong> ({{ animal.type }})
+                                            <span class="status-badge status-{{ animal.status|lower|replace(' ', '-') }}">{{ animal.status }}</span>
+                                            <small class="text-muted d-block mt-1">Posted: {{ animal.date_posted.strftime('%Y-%m-%d %H:%M') if animal.date_posted else 'N/A' }}</small>
+                                        </div>
+                                        {# Edit/Delete buttons would go here #}
+                                    </div>
+
+                                    {# --- Adoption Requests --- #}
+                                    {% if animal.status == 'Available' %}
+                                        <div class="requests-section mt-2 pt-2 border-top" id="requests-for-{{ animal.animal_id }}">
+                                            {% if animal.pending_requests is defined and animal.pending_requests %}
+                                                <h4 class="small fw-bold mb-2 text-secondary">Pending Adoption Requests:</h4>
+                                                {% for req in animal.pending_requests %}
+                                                    <div class="request-item d-flex flex-wrap justify-content-between align-items-center mb-2 pb-2 border-bottom" data-adoption-id="{{ req.adoption_id }}">
+                                                        <div class="me-2">
+                                                            <span class="small">From: <strong>{{ req.adopter_name }}</strong> ({{ req.adopter_email }})</span>
+                                                            <small class="text-muted d-block">Submitted: {{ req.adoption_date.strftime('%Y-%m-%d %H:%M') if req.adoption_date else 'N/A' }}</small>
+                                                        </div>
+                                                        <div class="item-actions mt-1 mt-md-0">
+                                                            <button class="btn btn-sm btn-success action-button me-1" onclick="processRequest({{ req.adoption_id }}, 'accept')"><i class="fas fa-check"></i></button>
+                                                            <button class="btn btn-sm btn-danger action-button" onclick="processRequest({{ req.adoption_id }}, 'reject')"><i class="fas fa-times"></i></button>
+                                                            <span class="request-feedback small ms-2" id="feedback-{{ req.adoption_id }}"></span>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <small class="text-muted fst-italic">No pending requests.</small>
+                                            {% endif %}
+                                        </div>
+                                     {% elif animal.status == 'Adopted' %}
+                                         <div class="requests-section mt-2 pt-2 border-top" id="requests-for-{{ animal.animal_id }}">
+                                             <small class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i> Adopted</small>
+                                         </div>
+                                     {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">You haven't posted any animals yet. <a href="{{ url_for('adoption_page') }}#post-form-section">Post one now!</a></p>
+                    {% endif %}
+                 </div>
+            </div>
+        </div>
+
+        {# Your Adoption Requests #}
+        <div class="col-lg-6">
+             <div class="dashboard-section card shadow-sm h-100">
+                 <div class="card-header bg-light border-bottom">
+                     <h2 class="h5 mb-0"><i class="fas fa-envelope-open-text me-2 text-primary"></i>Your Adoption Requests</h2>
+                 </div>
+                 <div class="card-body">
+                    {% if adoption_requests is defined and adoption_requests %}
+                        <ul class="list-group list-group-flush item-list">
+                            {% for req in adoption_requests %}
+                                <li class="list-group-item px-0 py-2">
+                                    <div class="item-details">
+                                         <i class="fas fa-file-alt text-secondary"></i> Request for <strong>{{ req.animal_name }}</strong>
+                                         <span class="status-badge status-{{ req.status|lower|replace(' ', '-') }}">{{ req.status }}</span>
+                                         <small class="text-muted d-block mt-1">Submitted: {{ req.adoption_date.strftime('%Y-%m-%d %H:%M') if req.adoption_date else 'N/A' }}</small>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">You haven't submitted any adoption requests. <a href="{{ url_for('adoption_page') }}">Find a pet!</a></p>
+                    {% endif %}
+                 </div>
+             </div>
+        </div>
+
+        {# Your Donation History #}
+        <div class="col-lg-6">
+             <div class="dashboard-section card shadow-sm h-100">
+                <div class="card-header bg-light border-bottom">
+                     <h2 class="h5 mb-0"><i class="fas fa-donate me-2 text-success"></i>Your Donation History</h2>
+                </div>
+                 <div class="card-body">
+                    {% if donation_history is defined and donation_history %}
+                        <ul class="list-group list-group-flush item-list">
+                            {% for donation in donation_history %}
+                                <li class="list-group-item px-0 py-2">
+                                    <div class="item-details">
+                                        {% if donation.donation_type == 'Money' %}
+                                            <i class="fas fa-money-bill-wave text-success"></i> Donated <strong>₹{{ "%.2f"|format(donation.amount|float) }}</strong>
+                                        {% elif donation.donation_type == 'Products' %}
+                                            <i class="fas fa-box-open text-info"></i> Donated: <strong>{{ donation.product_details | default('N/A') | truncate(50) }}</strong>
+                                        {% else %}
+                                            <i class="fas fa-gift text-secondary"></i> Donated: <strong>{{ donation.donation_type }}</strong>
+                                        {% endif %}
+                                        <span class="status-badge status-{{ donation.status|lower|replace(' ', '-') }}">{{ donation.status | default('N/A') }}</span>
+                                         <small class="text-muted d-block mt-1">Date: {{ donation.donation_date.strftime('%Y-%m-%d %H:%M') if donation.donation_date else 'N/A' }}</small>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">You have no donation history. <a href="{{ url_for('donate_page') }}">Consider donating today!</a></p>
+                    {% endif %}
+                 </div>
+             </div>
+        </div>
+
+    </div> {# End Row #}
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+    {{ super() }}
+    {# --- Dashboard Specific JS --- #}
+    <script>
+        async function processRequest(adoptionId, action) {
+            const requestItemDiv = document.querySelector(`.request-item[data-adoption-id="${adoptionId}"]`);
+            if (!requestItemDiv) { console.error(`UI Error: Request item div not found (ID ${adoptionId})`); return; }
+            const feedbackSpan = requestItemDiv.querySelector(`#feedback-${adoptionId}`);
+            const actionButtons = requestItemDiv.querySelectorAll('.action-button');
+            actionButtons.forEach(button => button.disabled = true);
+            feedbackSpan.textContent = 'Processing...'; feedbackSpan.className = 'request-feedback small ms-2 text-warning';
+            const formData = new FormData(); formData.append('adoption_id', adoptionId); formData.append('action', action);
+            try {
+                const response = await fetch("{{ url_for('process_adoption_request') }}", { method: 'POST', body: formData }); const result = await response.json();
+                if (response.ok && result.success) {
+                    feedbackSpan.textContent = result.message; feedbackSpan.className = `request-feedback small ms-2 ${action === 'accept' ? 'text-success' : 'text-danger'} fw-bold`;
+                    if (action === 'accept') {
+                        const animalLi = requestItemDiv.closest('li.list-group-item');
+                        if (animalLi) {
+                            const statusBadge = animalLi.querySelector('.item-details .status-badge'); if (statusBadge) { statusBadge.textContent = 'Adopted'; statusBadge.className = 'status-badge status-adopted'; }
+                            const requestsSection = animalLi.querySelector('.requests-section'); if (requestsSection) { requestsSection.innerHTML = '<small class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i> Adopted.</small>'; }
+                        } else { requestItemDiv.innerHTML = `<span class="text-success fw-bold">${result.message}</span>`; }
+                    } else { requestItemDiv.innerHTML = `<span class="text-danger fw-bold">${result.message}</span>`; }
+                } else { feedbackSpan.textContent = `Error: ${result.message || 'Failed'}`; feedbackSpan.className = 'request-feedback small ms-2 text-danger'; actionButtons.forEach(button => button.disabled = false); }
+            } catch (error) { console.error("Fetch Error processing adoption:", error); feedbackSpan.textContent = 'Network error.'; feedbackSpan.className = 'request-feedback small ms-2 text-danger'; actionButtons.forEach(button => button.disabled = false); }
+        }
+    </script>
+{% endblock %}

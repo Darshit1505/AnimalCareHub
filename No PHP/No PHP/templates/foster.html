@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% set page_active = 'foster' %}
+{% block body_class %}content-page foster-page{% endblock %}
+
+{% block title %}{{ page_title }} - Pet's Paalan{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        .hero-image-foster {
+            /* *** REPLACE IMAGE PATH *** */
+            background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url("{{ url_for('static', filename='image/placeholder-foster-home.jpg') }}") no-repeat center center;
+            background-size: cover; padding: 6rem 1rem; margin-bottom: 3rem; border-radius: 0.5rem; color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+        }
+        .content-section h2, .form-section h2 { color: var(--bs-primary); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; }
+        .content-section h3, .form-section h3 { color: var(--bs-success); font-size: 1.3rem; margin-top: 2rem; margin-bottom: 1rem; }
+        .checklist li { margin-bottom: 0.5rem; }
+        .checklist li i { color: var(--bs-success); margin-right: 8px; }
+        .radio-group label { margin-right: 15px; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+    <div class="hero-image-foster text-center shadow rounded">
+        <h1 class="display-4 fw-bold">{{ page_title }}</h1>
+        <p class="lead col-lg-8 mx-auto">Become a vital bridge to a forever home. Open your heart and home temporarily to an animal in need.</p>
+    </div>
+
+    <div class="row g-5">
+         <div class="col-lg-7 content-section"> {# Info Column #}
+            <h2>What Does Fostering Involve?</h2>
+            <p class="text-muted">Foster care provides a temporary, loving home for animals outside the shelter environment...</p>
+
+            <h3 id="who-needs-fostering">Animals Needing Foster Care</h3>
+            <ul class="list-unstyled">
+                 <li class="mb-2"><i class="fas fa-baby fa-fw text-primary me-2"></i><strong>Puppies & Kittens...</strong></li>
+                <li class="mb-2"><i class="fas fa-notes-medical fa-fw text-primary me-2"></i><strong>Medical Recovery...</strong></li>
+                <li class="mb-2"><i class="fas fa-heartbeat fa-fw text-primary me-2"></i><strong>Behavioral Support...</strong></li>
+                 <li class="mb-2"><i class="fas fa-home fa-fw text-primary me-2"></i><strong>Shelter Break...</strong></li>
+                <li class="mb-2"><i class="fas fa-paw fa-fw text-primary me-2"></i><strong>Senior or Special Needs Pets...</strong></li>
+            </ul>
+
+             <h3 id="support">Support for Fosters</h3>
+             <p>Pet's Paalan is committed to supporting our foster families. We typically provide:</p>
+             <ul class="list-unstyled checklist">
+                <li><i class="fas fa-check"></i> All necessary food and supplies...</li>
+                <li><i class="fas fa-check"></i> Complete veterinary care...</li>
+                <li><i class="fas fa-check"></i> Guidance, training resources, and support...</li>
+                <li><i class="fas fa-check"></i> Assistance finding the adoptive home...</li>
+            </ul>
+
+             <h3 id="requirements">Could You Be a Foster Parent?</h3>
+             <ul class="text-muted">
+                 <li>Can you provide a safe, indoor space...?</li>
+                 <li>Do you have time for daily care...?</li>
+                 <li>Are you able to transport...?</li>
+                 <li>Are all members of your household supportive...?</li>
+                 <li>Can you lovingly care for and let go...?</li>
+             </ul>
+
+        </div>
+         <div class="col-lg-5 form-section"> {# Form Column #}
+            <div class="card shadow-sm sticky-lg-top">
+                 <div class="card-body p-4">
+                    <h2 class="h4 text-center mb-4">Foster Application</h2>
+                    {# Flash messages handled in base.html #}
+
+                    <form method="POST" action="{{ url_for('foster_page') }}" id="fosterForm">
+                         <div class="mb-3">
+                            <label for="foster_name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="foster_name" name="foster_name" value="{{ form_data.get('foster_name', '') }}" required>
+                        </div>
+                         <div class="row mb-3">
+                            <div class="col-md-6">
+                                 <label for="foster_email" class="form-label">Email <span class="text-danger">*</span></label>
+                                 <input type="email" class="form-control form-control-sm" id="foster_email" name="foster_email" value="{{ form_data.get('foster_email', '') }}" required>
+                            </div>
+                             <div class="col-md-6">
+                                <label for="foster_phone" class="form-label">Phone <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control form-control-sm" id="foster_phone" name="foster_phone" value="{{ form_data.get('foster_phone', '') }}" required>
+                             </div>
+                        </div>
+                        <div class="mb-3">
+                             <label for="foster_address" class="form-label">Full Address <span class="text-danger">*</span></label>
+                             <textarea class="form-control form-control-sm" id="foster_address" name="foster_address" rows="2" required>{{ form_data.get('foster_address', '') }}</textarea>
+                        </div>
+                         <div class="mb-3">
+                             <label for="foster_household" class="form-label">Household Info</label>
+                             <input type="text" class="form-control form-control-sm" id="foster_household" name="foster_household" placeholder="e.g., Adults, kids (ages), other pets (types)" value="{{ form_data.get('foster_household', '') }}">
+                         </div>
+                         <div class="row mb-3">
+                              <div class="col-md-5">
+                                 <label for="foster_home_type" class="form-label">Home Type <span class="text-danger">*</span></label>
+                                 <select class="form-select form-select-sm" id="foster_home_type" name="foster_home_type" required>
+                                     <option value="" disabled {% if not form_data.get('foster_home_type') %}selected{% endif %}>-- Select --</option>
+                                     <option value="House" {% if form_data.get('foster_home_type') == 'House' %}selected{% endif %}>House</option>
+                                     <option value="Apartment" {% if form_data.get('foster_home_type') == 'Apartment' %}selected{% endif %}>Apartment</option>
+                                     <option value="Condo" {% if form_data.get('foster_home_type') == 'Condo' %}selected{% endif %}>Condo</option>
+                                     <option value="Other" {% if form_data.get('foster_home_type') == 'Other' %}selected{% endif %}>Other</option>
+                                 </select>
+                              </div>
+                              <div class="col-md-4 radio-group">
+                                  <label class="form-label d-block">Yard? <span class="text-danger">*</span></label>
+                                  <div class="form-check form-check-inline">
+                                      <input class="form-check-input" type="radio" name="foster_has_yard" id="yardYes" value="Yes" {% if form_data.get('foster_has_yard') == 'Yes' %}checked{% endif %} required>
+                                      <label class="form-check-label small" for="yardYes">Yes</label>
+                                  </div>
+                                  <div class="form-check form-check-inline">
+                                      <input class="form-check-input" type="radio" name="foster_has_yard" id="yardNo" value="No" {% if form_data.get('foster_has_yard') == 'No' %}checked{% endif %} required>
+                                      <label class="form-check-label small" for="yardNo">No</label>
+                                  </div>
+                                   <div class="form-check form-check-inline">
+                                      <input class="form-check-input" type="radio" name="foster_has_yard" id="yardPartial" value="Partial" {% if form_data.get('foster_has_yard') == 'Partial' %}checked{% endif %} required>
+                                      <label class="form-check-label small" for="yardPartial">Partial</label>
+                                  </div>
+                              </div>
+                               <div class="col-md-3 radio-group" id="fencedYardGroup" style="display: {% if form_data.get('foster_has_yard') == 'Yes' %}block{% else %}none{% endif %};"> {# JS controls display #}
+                                  <label class="form-label d-block">Fenced?</label>
+                                  <div class="form-check form-check-inline">
+                                      <input class="form-check-input" type="radio" name="foster_yard_fenced" id="fencedYes" value="Yes" {% if form_data.get('foster_yard_fenced') == 'Yes' %}checked{% endif %}>
+                                      <label class="form-check-label small" for="fencedYes">Yes</label>
+                                  </div>
+                                  <div class="form-check form-check-inline">
+                                      <input class="form-check-input" type="radio" name="foster_yard_fenced" id="fencedNo" value="No" {% if form_data.get('foster_yard_fenced') == 'No' %}checked{% endif %}>
+                                      <label class="form-check-label small" for="fencedNo">No</label>
+                                  </div>
+                              </div>
+                         </div>
+
+                         <div class="mb-3 radio-group">
+                             <label class="form-label d-block">Able to Transport? <span class="text-danger">*</span></label>
+                              <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="foster_can_transport" id="transportYes" value="Yes" {% if form_data.get('foster_can_transport') == 'Yes' %}checked{% endif %} required>
+                                  <label class="form-check-label small" for="transportYes">Yes</label>
+                              </div>
+                              <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="foster_can_transport" id="transportNo" value="No" {% if form_data.get('foster_can_transport') == 'No' %}checked{% endif %} required>
+                                  <label class="form-check-label small" for="transportNo">No</label>
+                              </div>
+                         </div>
+
+                         <div class="mb-3">
+                            <label class="form-label d-block mb-1">Preferred Animals <small>(Check all that apply)</small></label>
+                            {% set preferred = ['Puppies', 'Kittens', 'Adult Dogs', 'Adult Cats', 'Seniors', 'Medical Needs', 'Behavioral Needs', 'Any'] %}
+                            {% set selected_preferred = form_data.getlist('foster_preferred_animal') if form_data else [] %}
+                            {% for item in preferred %}
+                             <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="foster_preferred_animal" id="pref_{{ item|lower|replace(' ', '_') }}" value="{{ item }}" {% if item in selected_preferred %}checked{% endif %}>
+                                <label class="form-check-label small" for="pref_{{ item|lower|replace(' ', '_') }}">{{ item }}</label>
+                            </div>
+                            {% endfor %}
+                         </div>
+
+                         <div class="mb-3">
+                             <label for="foster_experience" class="form-label">Fostering/Animal Experience <small>(Optional)</small></label>
+                             <textarea class="form-control form-control-sm" id="foster_experience" name="foster_experience" rows="3">{{ form_data.get('foster_experience', '') }}</textarea>
+                         </div>
+                         <div class="mb-3">
+                             <label for="foster_why" class="form-label">Why do you want to foster? <span class="text-danger">*</span></label>
+                             <textarea class="form-control form-control-sm" id="foster_why" name="foster_why" rows="3" required>{{ form_data.get('foster_why', '') }}</textarea>
+                         </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mt-3">Submit Foster Application</button>
+                    </form>
+                </div>
+            </div>
+         </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+ {{ super() }}
+ <script>
+    // Show/hide fenced yard option based on yard selection
+    document.querySelectorAll('input[name="foster_has_yard"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const fencedGroup = document.getElementById('fencedYardGroup');
+            const fencedRadios = document.querySelectorAll('input[name="foster_yard_fenced"]');
+            if (this.value === 'Yes') {
+                fencedGroup.style.display = 'block';
+                // Optional: make fenced required only if yard=Yes
+                // fencedRadios.forEach(r => r.required = true);
+            } else {
+                fencedGroup.style.display = 'none';
+                // Optional: make fenced not required and uncheck
+                // fencedRadios.forEach(r => { r.required = false; r.checked = false; });
+            }
+        });
+    });
+     // Trigger on load in case of form repopulation
+     document.addEventListener('DOMContentLoaded', () => {
+        const yardYes = document.getElementById('yardYes');
+        if (yardYes && yardYes.checked) {
+             document.getElementById('fencedYardGroup').style.display = 'block';
+        }
+     });
+ </script>
+{% endblock %}

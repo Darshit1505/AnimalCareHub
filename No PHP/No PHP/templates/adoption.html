@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% set page_active = 'adoption' %}
+{% block body_class %}adoption-page bg-light{% endblock %}
+
+{% block title %}Adopt & Post Animals - Pet's Paalan{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    {# CSS specific to carousel/adoption is now in style.css #}
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="section-heading">Adopt or Post an Animal</h1>
+
+    {# --- Post Animal Form Section --- #}
+    {% if session.user_id %}
+    <section id="post-form-section" class="content-section mb-5 mx-auto" style="max-width: 700px;">
+        <h2>Post an Animal for Adoption</h2>
+        <p class="text-muted mb-4 text-center">Found an animal needing a loving home? Fill out the details below.</p>
+        <form id="animalForm">
+            <div class="mb-3">
+                <label for="animalName" class="form-label">Animal Name:</label>
+                <input type="text" class="form-control" id="animalName" name="animalName" required>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                     <label for="animalType" class="form-label">Animal Type:</label>
+                     <select class="form-select" id="animalType" name="animalType" required>
+                         <option value="" disabled selected>-- Select Type --</option>
+                         <option value="Dog">Dog</option> <option value="Cat">Cat</option> <option value="Bird">Bird</option> <option value="Other">Other</option>
+                     </select>
+                </div>
+                 <div class="col-md-6">
+                     <label for="animalAge" class="form-label">Age (years, approx):</label>
+                     <input type="number" class="form-control" id="animalAge" name="animalAge" min="0" step="0.1" required>
+                 </div>
+            </div>
+            <div class="mb-3">
+                <label for="animalDescription" class="form-label">Description:</label>
+                <textarea class="form-control" id="animalDescription" name="animalDescription" rows="4" placeholder="Temperament, history, special needs..." required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="animalImage" class="form-label">Upload Image (Recommended):</label>
+                <input type="file" class="form-control" id="animalImage" name="animalImage" accept="image/png, image/jpeg, image/gif">
+            </div>
+            <button type="submit" class="btn btn-success w-100">Post Animal for Adoption</button>
+            <div id="postAnimalFeedback" class="mt-3"></div> {# JS populates this #}
+        </form>
+    </section>
+    {% else %}
+     <section id="post-form-section" class="content-section mb-5 text-center mx-auto" style="max-width: 700px;">
+         <h2>Post an Animal</h2>
+         <p>Help find a home for an animal in need.</p>
+         <a href="{{ url_for('login', next=url_for('adoption_page')) }}" class="btn btn-primary">Log in to Post</a>
+     </section>
+    {% endif %}
+
+    {# --- Animals Carousel Section --- #}
+    <section id="adoption-list" class="content-section">
+        <h2 class="text-center">Meet Your New Best Friend</h2>
+        <div id="animalsCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="6000">
+            <div class="carousel-inner" id="animalsCarouselInner">
+                 {% if not animals %}
+                     <div class="carousel-item active"> <div class="d-flex justify-content-center align-items-center" style="min-height: 400px;"> <p class="text-muted text-center p-3"> No animals currently listed for adoption. Check back soon! </p> </div> </div>
+                {% endif %}
+                {% for animal in animals %}
+                <div class="carousel-item {% if loop.first %}active{% endif %}" data-animal-slide-id="{{ animal.animal_id }}">
+                    <div class="animal-card carousel-card card-hover-effect" data-animal-id="{{ animal.animal_id }}">
+                         {% if animal.image_url %}
+                              {# *** CHECK PATH, USE PLACEHOLDER IF NEEDED *** #}
+                             <img src="{{ animal.image_url }}" alt="Photo of {{ animal.name }}" class="d-block mx-auto">
+                         {% else %}
+                             <div class="img-placeholder mx-auto" style="height:250px; width: 100%; max-width: 300px;"><span>No Image</span></div>
+                         {% endif %}
+                        <div class="card-body-details mt-3">
+                             <h3 class="text-primary">{{ animal.name }}</h3>
+                             <p><span class="badge bg-info text-dark me-2">{{ animal.type }}</span> <span class="badge bg-light text-dark">{{ "%.1f"|format(animal.age|float) }} year(s) old</span></p>
+                             <p class="text-muted small">{{ animal.description | truncate(120) }}</p>
+                             <button type="button" class="btn btn-primary btn-sm adopt-button mt-2" onclick="openAdoptionModal({{ animal.animal_id }}, '{{ animal.name | escape }}')">
+                                 Learn More & Adopt
+                             </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if animals and animals|length > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#animalsCarousel" data-bs-slide="prev"> <span class="carousel-control-prev-icon" aria-hidden="true"></span> <span class="visually-hidden">Previous</span> </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#animalsCarousel" data-bs-slide="next"> <span class="carousel-control-next-icon" aria-hidden="true"></span> <span class="visually-hidden">Next</span> </button>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+{# --- Adoption Request Modal (Bootstrap Structure) --- #}
+<div class="modal fade" id="adoptionModal" tabindex="-1" aria-labelledby="adoptionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adoptionModalLabel">Adoption Request for <span id="modalAnimalName">Animal</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="adoptionForm"> {# Still need ID for JS #}
+                    <input type="hidden" id="modalAnimalIdentifier" name="animalIdentifier">
+                    <div class="mb-3"> <label for="adopterName" class="form-label">Your Name:</label> <input type="text" class="form-control" id="adopterName" name="adopterName" required> </div>
+                    <div class="mb-3"> <label for="adopterEmail" class="form-label">Your Email:</label> <input type="email" class="form-control" id="adopterEmail" name="adopterEmail" required> </div>
+                    <div class="mb-3"> <label for="adopterPhoto" class="form-label">Upload Your Photo:</label> <input type="file" class="form-control form-control-sm" id="adopterPhoto" name="adopterPhoto" accept="image/*,.pdf" required> </div>
+                    <div class="mb-3"> <label for="adopterAadhaar" class="form-label">Upload ID Proof:</label> <input type="file" class="form-control form-control-sm" id="adopterAadhaar" name="adopterAadhaar" accept="image/*,.pdf" required> <div class="form-text small">Accepted formats: JPG, PNG, PDF. Information handled securely.</div> </div>
+                    <div id="adoptionMessage" class="mt-3"></div> {# JS populates this #}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="submit" form="adoptionForm" class="btn btn-primary btn-sm">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }} {# Includes Bootstrap JS from base #}
+    {# --- JavaScript for Adoption Page Functionality --- #}
+    <script>
+        // --- Adoption Modal Handling (Bootstrap Version) ---
+        const adoptionModalElement = document.getElementById('adoptionModal');
+        const adoptionBootstrapModal = new bootstrap.Modal(adoptionModalElement);
+        const adoptionForm = document.getElementById('adoptionForm');
+        const modalAnimalIdentifierInput = document.getElementById('modalAnimalIdentifier');
+        const adoptionMessageDiv = document.getElementById('adoptionMessage');
+        const modalAnimalNameSpan = document.getElementById('modalAnimalName');
+
+        function openAdoptionModal(animalId, animalName = 'this animal') {
+            modalAnimalIdentifierInput.value = animalId;
+            modalAnimalNameSpan.textContent = animalName;
+            adoptionForm.reset();
+            adoptionMessageDiv.innerHTML = ''; adoptionMessageDiv.className = 'mt-3';
+            adoptionBootstrapModal.show();
+        }
+
+        // --- Handle Adoption Form Submit (Updated for Carousel & Bootstrap Modal) ---
+         async function handleAdoptionSubmit(event) {
+            event.preventDefault();
+            adoptionMessageDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div> Submitting...'; adoptionMessageDiv.className = 'mt-3 alert alert-info d-flex align-items-center';
+            const submitButton = adoptionForm.closest('.modal-content').querySelector('.modal-footer button[type="submit"]'); if(submitButton) submitButton.disabled = true;
+            const animalId = modalAnimalIdentifierInput.value; const formData = new FormData(adoptionForm);
+             if (!animalId) { adoptionMessageDiv.innerHTML = 'Error: Animal identifier missing.'; adoptionMessageDiv.className = 'mt-3 alert alert-danger'; if(submitButton) submitButton.disabled = false; return; }
+            const url = `/submit_adoption/${encodeURIComponent(animalId)}`;
+            try {
+                const response = await fetch(url, { method: 'POST', body: formData }); const result = await response.json();
+                if (response.ok && result.success) {
+                    adoptionMessageDiv.innerHTML = `<i class="fas fa-check-circle me-2"></i> ${result.message || 'Request submitted!'}`; adoptionMessageDiv.className = 'mt-3 alert alert-success'; adoptionForm.reset();
+                    const carouselItemSelector = `.carousel-item[data-animal-slide-id="${animalId}"]`; const itemToRemove = document.querySelector(carouselItemSelector);
+                    const carouselInner = document.getElementById('animalsCarouselInner'); const carouselElement = document.getElementById('animalsCarousel'); let myCarousel = carouselElement ? bootstrap.Carousel.getInstance(carouselElement) : null;
+                    if (itemToRemove) { itemToRemove.remove(); if (carouselInner && carouselInner.children.length > 0 && !carouselInner.querySelector('.carousel-item.active')) { carouselInner.children[0].classList.add('active'); } if (carouselInner && carouselInner.children.length > 0) { if (myCarousel) { myCarousel.dispose(); myCarousel = new bootstrap.Carousel(carouselElement, {}); } else { myCarousel = new bootstrap.Carousel(carouselElement, {}); } } else if (carouselInner) { const placeholderHTML = `<div class="carousel-item active"><div class="d-flex justify-content-center align-items-center" style="min-height: 400px;"><p class="text-muted text-center p-3">No animals currently listed for adoption.</p></div></div>`; carouselInner.innerHTML = placeholderHTML; } } else { console.warn(`Could not find carousel item: ${carouselItemSelector}`); }
+                    setTimeout(() => { if (adoptionModalElement.classList.contains('show')) { adoptionBootstrapModal.hide(); } }, 3000);
+                } else { adoptionMessageDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error: ${result.message || 'Failed.'}`; adoptionMessageDiv.className = 'mt-3 alert alert-danger'; }
+            } catch (error) { console.error('Adoption fetch error:', error); adoptionMessageDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> Network error.'; adoptionMessageDiv.className = 'mt-3 alert alert-danger'; } finally { if(submitButton) submitButton.disabled = false; }
+         }
+        if(adoptionForm) { adoptionForm.addEventListener('submit', handleAdoptionSubmit); }
+
+
+        // --- Animal Posting Logic (Updated for Carousel) ---
+        const animalPostForm = document.getElementById('animalForm');
+        const animalsCarouselInner = document.getElementById('animalsCarouselInner');
+        if (animalPostForm && animalsCarouselInner) {
+            const postFeedbackDiv = document.getElementById('postAnimalFeedback');
+            animalPostForm.addEventListener('submit', async function(e) {
+                 e.preventDefault();
+                const name = document.getElementById('animalName').value.trim(); const type = document.getElementById('animalType').value; const age = document.getElementById('animalAge').value; const description = document.getElementById('animalDescription').value.trim(); const imageFile = document.getElementById('animalImage').files[0];
+                if (!name || !type || age === '' || !description) { postFeedbackDiv.innerHTML = 'Please fill all required fields.'; postFeedbackDiv.className = 'mt-3 alert alert-danger'; postFeedbackDiv.style.display = 'block'; return; }
+                postFeedbackDiv.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div> Posting...'; postFeedbackDiv.className = 'mt-3 alert alert-info d-flex align-items-center'; postFeedbackDiv.style.display = 'block'; const submitButton = animalPostForm.querySelector('button[type="submit"]'); submitButton.disabled = true;
+                const formDataForBackend = new FormData(animalPostForm); let savedAnimalId = null; let savedImageUrl = null;
+                try {
+                    const postAnimalUrl = "{{ url_for('post_animal') }}"; const response = await fetch(postAnimalUrl, { method: 'POST', body: formDataForBackend }); const result = await response.json();
+                    if (response.ok && result.success) {
+                        postFeedbackDiv.innerHTML = `<i class="fas fa-check-circle me-2"></i> ${result.message || 'Posted!'}`; postFeedbackDiv.className = 'mt-3 alert alert-success'; savedAnimalId = result.animal_id; savedImageUrl = result.image_url; animalPostForm.reset(); setTimeout(() => { postFeedbackDiv.style.display = 'none'; }, 4000);
+                        const placeholderItem = animalsCarouselInner.querySelector('.placeholder-text')?.closest('.carousel-item'); if (placeholderItem) { placeholderItem.remove(); }
+                        const newCarouselItem = document.createElement('div'); newCarouselItem.classList.add('carousel-item'); newCarouselItem.setAttribute('data-animal-slide-id', savedAnimalId); const needsActive = !animalsCarouselInner.querySelector('.carousel-item'); if (needsActive) { newCarouselItem.classList.add('active'); }
+                        const animalCard = document.createElement('div'); animalCard.classList.add('animal-card', 'carousel-card', 'card-hover-effect'); animalCard.setAttribute('data-animal-id', savedAnimalId);
+                        let imageElement; if (savedImageUrl) { imageElement = document.createElement('img'); imageElement.src = savedImageUrl; imageElement.alt = `Photo of ${name}`; imageElement.classList.add('d-block', 'mx-auto'); } else if (imageFile && imageFile.type.startsWith("image/")) { imageElement = document.createElement('img'); imageElement.alt = `Photo of ${name}`; imageElement.classList.add('d-block', 'mx-auto'); const reader = new FileReader(); reader.onload = (event) => { imageElement.src = event.target.result; }; reader.readAsDataURL(imageFile); } else { imageElement = document.createElement('div'); imageElement.classList.add('img-placeholder', 'mx-auto'); imageElement.style.cssText = 'height:250px; width: 100%; max-width: 300px;'; imageElement.innerHTML='<span>No Image</span>'; } animalCard.appendChild(imageElement);
+                        const detailsDiv = document.createElement('div'); detailsDiv.classList.add('card-body-details', 'mt-3'); detailsDiv.innerHTML = `<h3 class="text-primary">${name}</h3><p><span class="badge bg-info text-dark me-2">${type}</span><span class="badge bg-light text-dark">${parseFloat(age).toFixed(1)} year(s) old</span></p><p class="text-muted small">${description.substring(0,120)}${description.length > 120 ? '...' : ''}</p><button type="button" class="btn btn-primary btn-sm adopt-button mt-2" onclick="openAdoptionModal(${savedAnimalId}, '${name.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">Learn More & Adopt</button>`; animalCard.appendChild(detailsDiv);
+                        newCarouselItem.appendChild(animalCard); animalsCarouselInner.prepend(newCarouselItem);
+                        const carouselElement = document.getElementById('animalsCarousel'); if (carouselElement) { let myCarousel = bootstrap.Carousel.getInstance(carouselElement); if (myCarousel) { myCarousel.dispose(); } new bootstrap.Carousel(carouselElement, {}); }
+                    } else { postFeedbackDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error: ${result.message || 'Failed.'}`; postFeedbackDiv.className = 'mt-3 alert alert-danger'; }
+                } catch (error) { console.error('Error posting animal:', error); postFeedbackDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> Network error.'; postFeedbackDiv.className = 'mt-3 alert alert-danger'; } finally { submitButton.disabled = false; }
+             });
+        } else { console.warn("Post form/carousel inner not found."); }
+    </script>
+{% endblock %}
