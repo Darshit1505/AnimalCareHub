@@ -7,18 +7,6 @@ AnimalCareHub is a comprehensive web application designed to facilitate animal w
 
 Built as a demonstration of modern web development principles, this project leverages Python's Flask framework for robust backend operations, coupled with HTML, CSS, and JavaScript for an intuitive and dynamic frontend experience.
 
-## Live Demo (Optional)
-
-*If your project is deployed, you can provide a link here.*
-[https://your-project-live-link.com](https://your-project-live-link.com)
-
-## Screenshots / Demo
-
-*   *(Add a compelling GIF or a series of screenshots showcasing the application's key functionalities, e.g., Homepage, Login, Dashboard, Adoption listings, Animal Posting Form, Rescue Report Form, etc.)*
-
-![AnimalCareHub Homepage Example](_static_screenshot_homepage.png)
-![User Dashboard Example](_static_screenshot_dashboard.png)
-*(Replace these with actual links to your screenshot images in the repo, e.g., `/docs/homepage.png` or `assets/dashboard.gif` if you create a `docs` or `assets` folder for them).*
 
 ## Key Features
 
@@ -416,3 +404,4 @@ CREATE TABLE IF NOT EXISTS contact_messages (
     message TEXT NOT NULL,
     submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
