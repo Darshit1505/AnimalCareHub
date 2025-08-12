@@ -42,41 +42,18 @@ Built as a demonstration of modern web development principles, this project leve
 *   **SQL (Structured Query Language):** Employed for designing the database schema, performing all Create, Read, Update, Delete (CRUD) operations, and retrieving complex datasets using `JOIN` clauses and parameterized queries (preventing SQL injection).
 *   **Transaction Management:** `mysql.connection.commit()` and `mysql.connection.rollback()` are strategically used to ensure data integrity during multi-step operations.
 
-*   ## Project Structure
-*   AnimalCareHub/
+
+```markdown   
+## Project Structure
+
+AnimalCareHub/     
 ├── .venv/                   # Python virtual environment (ignored by Git)
 ├── static/                  # Stores static assets (CSS, JS, images) and uploaded files
 │   ├── css/                 # Stylesheets
 │   ├── image/               # Static images/icons
-│   ├── js/                  # JavaScript files
-│   └── uploads/             # Dynamically uploaded user/animal/rescue files
-│       ├── adoptions/
-│       ├── animals/
-│       └── rescues/
-├── templates/               # Jinja2 HTML templates for dynamic content rendering
-│   ├── _footer.html         # Common footer
-│   ├── _navbar.html         # Common navigation bar
-│   ├── 404.html             # Not Found error page
-│   ├── 500.html             # Internal Server Error page
-│   ├── adoption.html        # Animal adoption listings
-│   ├── base.html            # Base template for all pages
-│   ├── contact.html         # Contact form
-│   ├── dashboard.html       # User-specific dashboard
-│   ├── donate.html          # Donation submission form
-│   ├── foster.html          # Foster application form
-│   ├── index.html           # Homepage
-│   ├── login.html           # User login form
-│   ├── placeholder.html     # Generic content template
-│   ├── register.html        # User registration form
-│   ├── rescue.html          # Animal rescue reporting form
-│   ├── vaccination.html     # Vaccination appointment scheduling
-│   └── volunteer.html       # Volunteer application form
-├── app.py                   # The main Flask application, containing all routes and logic
-├── requirements.txt         # List of Python dependencies
-├── schema.sql               # SQL script to create the necessary database tables
-├── .env                     # Environment variables (ignored by Git for security)
-└── .gitignore               # Specifies files and directories to be excluded from Git version control
+... (rest of the diagram)
 └── README.md                # Project documentation
+```          
 
 ## Setup and Installation
 
@@ -164,3 +141,4 @@ Feel free to connect with me for any questions or collaborations:
 
 *   **GitHub:** [https://github.com/Darshit1505](https://github.com/Darshit1505)
 *   **Email:** darshitrupareliya15@gmail.com
+
