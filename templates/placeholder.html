@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% set page_active = 'educational' %}
+{% block body_class %}placeholder-page educational-page{% endblock %} {# Add specific class #}
+
+{% block title %}{{ page_title | default('Resources') }} - Pet's Paalan{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        /* Specific styles for educational page layout */
+        .resource-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            border-radius: 50%;
+            margin-right: 15px;
+            color: #fff;
+        }
+        .icon-adoption { background-color: var(--bs-primary); }
+        .icon-care { background-color: var(--bs-success); }
+        .icon-rescue { background-color: var(--bs-warning); color: var(--text-dark) !important; }
+
+        .accordion-button { font-weight: 500; font-size: 1.05rem; }
+        .accordion-button i { font-size: 0.9em; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+    {# Flash messages handled in base.html #}
+
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold">{{ page_title | default('Pet Care & Adoption Resources') }}</h1>
+        <p class="lead text-muted col-md-8 mx-auto">Your comprehensive guide to responsible pet ownership, making informed adoption choices, and providing the best care for your companion.</p>
+    </div>
+
+    {# Handle placeholder message if route intended it #}
+    {% if page_title is defined and 'under development' in get_flashed_messages() | map(attribute='1') | join %}
+         <div class="text-center alert alert-info col-md-8 mx-auto">
+             <p class="lead mb-3">This page ({{ page_title }}) is under development. Please check back soon!</p>
+             <a href="{{ url_for('index') }}" class="btn btn-primary">Return to Home Page</a>
+         </div>
+    {% else %}
+        {# --- Show the actual educational content --- #}
+
+        {# --- Section 1: Adoption --- #}
+        <section class="resource-section mb-5 pt-4">
+            <h2 class="h3 mb-4 d-flex align-items-center">
+                <span class="resource-icon icon-adoption"><i class="fas fa-heart"></i></span>
+                Thinking About Adoption?
+            </h2>
+            <div class="accordion" id="adoptionAccordion">
+                 <div class="accordion-item"> <h3 class="accordion-header" id="headingAdoptReady"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdoptReady"><i class="fas fa-question-circle me-2"></i>Are You Ready? Checklist</button> </h3> <div id="collapseAdoptReady" class="accordion-collapse collapse" data-bs-parent="#adoptionAccordion"> <div class="accordion-body"> <p>Adopting a pet is a rewarding, long-term commitment...</p> <ul><li>Time Commitment...</li> <li>Financial Responsibility...</li> <li>Living Situation...</li> <li>Lifestyle Match...</li> <li>Household Agreement...</li> <li>Long-Term View...</li> </ul> <p>Ready? <a href="{{ url_for('adoption_page') }}" class="fw-bold">View adoptable animals!</a></p> </div> </div> </div>
+                 <div class="accordion-item"> <h3 class="accordion-header" id="headingAdoptPrep"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdoptPrep"><i class="fas fa-home me-2"></i>Preparing Your Home</button> </h3> <div id="collapseAdoptPrep" class="accordion-collapse collapse" data-bs-parent="#adoptionAccordion"> <div class="accordion-body"> <p>Create a safe environment...</p> <ul><li>Pet-Proofing...</li> <li>Essential Supplies...</li> <li>Designated Safe Space...</li> <li>Introduction Plan...</li> </ul> </div> </div> </div>
+                 <div class="accordion-item"> <h3 class="accordion-header" id="headingAdoptChoosing"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdoptChoosing"><i class="fas fa-paw me-2"></i>Choosing the Right Pet</button> </h3> <div id="collapseAdoptChoosing" class="accordion-collapse collapse" data-bs-parent="#adoptionAccordion"> <div class="accordion-body"> <p>Think about compatibility...</p> <ul><li>Energy Level...</li> <li>Size...</li> <li>Grooming Needs...</li> <li>Temperament...</li> <li>Age...</li> </ul> </div> </div> </div>
+            </div>
+        </section>
+
+        {# --- Section 2: Pet Care --- #}
+        <section class="resource-section mb-5 pt-4">
+            <h2 class="h3 mb-4 d-flex align-items-center">
+                 <span class="resource-icon icon-care"><i class="fas fa-notes-medical"></i></span>
+                Pet Care Essentials
+            </h2>
+             <div class="row g-4">
+                <div class="col-md-6"> <h4>Health & Wellness</h4> <ul> <li>Veterinary Care...</li> <li>Vaccinations... <a href="{{ url_for('vaccination_page')}}">Book now.</a></li> <li>Spay/Neuter...</li> <li>Parasite Prevention...</li> <li>Dental Hygiene...</li> <li>Know Signs of Illness...</li> </ul> </div>
+                <div class="col-md-6"> <h4>Nutrition</h4> <p>Feed a high-quality diet...</p> <h4>Grooming</h4> <p>Regular brushing, bathing...</p> <h4>Exercise & Enrichment</h4> <p>Provide daily activity...</p> <h4>Identification</h4> <p>Ensure collar and microchip...</p> </div>
+            </div>
+        </section>
+
+         {# --- Section 3: Rescue --- #}
+        <section class="resource-section pt-4">
+            <h2 class="h3 mb-4 d-flex align-items-center">
+                 <span class="resource-icon icon-rescue"><i class="fas fa-first-aid"></i></span>
+                Found an Animal in Need?
+            </h2>
+             <div class="row g-4">
+                 <div class="col-md-6"> <h4>What to Do</h4> <ul> <li>Prioritize Safety...</li> <li>Check Identification...</li> <li>Contain Safely...</li> <li>Contact Authorities...</li> <li>Injured Animals...</li> <li>Report Online...</li> </ul> <p><a href="{{ url_for('rescue_page') }}" class="btn btn-warning btn-sm">Report Sighting to Us</a></p> </div>
+                 <div class="col-md-6"> <h4>Important Notes</h4> <ul> <li>Don't Assume Abandonment...</li> <li>Legal Requirements...</li> <li>Disease Risk...</li> </ul> <h4>How Else to Help?</h4> <ul> <li>Support shelters (<a href="{{ url_for('donate_page') }}">Donate Here</a>).</li> <li>Foster / Volunteer.</li> <li>Educate others.</li> </ul> </div>
+            </div>
+        </section>
+
+        <p class="disclaimer mt-5"> <em><strong>Disclaimer:</strong> General guidance only. Consult a vet for medical advice. Contact local authorities for animals in distress.</em> </p>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+ {{ super() }} {# Includes Bootstrap JS for Accordion #}
+{% endblock %}

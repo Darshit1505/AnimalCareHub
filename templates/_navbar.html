@@ -1,0 +1,45 @@
+<!-- templates/_navbar.html -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top shadow-sm"> {# Light background, shadow #}
+    <div class="container"> {# Use container for centered content #}
+        <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
+            <i class="fas fa-paw text-primary"></i> {# Use theme color #}
+            Pet's Paalan
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNavbar">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">Home</a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'adoption_page' %}active{% endif %}" href="{{ url_for('adoption_page') }}">Adopt</a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'donate_page' %}active{% endif %}" href="{{ url_for('donate_page') }}">Donate</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'vaccination_page' %}active{% endif %}" href="{{ url_for('vaccination_page') }}">Vaccination</a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'rescue_page' %}active{% endif %}" href="{{ url_for('rescue_page') }}">Rescue</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'educational_page' %}active{% endif %}" href="{{ url_for('educational_page') }}">Resources</a>
+                </li>
+            </ul>
+            <div class="d-flex"> {# Use flex for login/register buttons #}
+                {% if session.user_id %}
+                     <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm me-2 {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                         <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                    </a>
+                     <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+                {% else %}
+                     <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-sm me-2 {% if request.endpoint == 'login' %}active{% endif %}">Login</a>
+                     <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm {% if request.endpoint == 'register' %}active{% endif %}">Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>

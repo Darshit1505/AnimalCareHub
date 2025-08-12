@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set page_active = 'vaccination' %}
+{% block body_class %}vaccination-page form-page{% endblock %}
+
+{% block title %}Vaccination Appointment - Pet's Paalan{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        .vaccination-image { object-fit: cover; height: 100%; max-height: 500px; }
+        .form-intro-text h2 { color: var(--bs-primary); } /* Blue heading for this page */
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center align-items-center g-lg-5">
+
+        {# Column 1: Image and Text #}
+        <div class="col-lg-5 text-center text-lg-start mb-5 mb-lg-0">
+            <h1 class="display-5 fw-bold lh-1 mb-3 text-primary"><i class="fas fa-syringe me-2"></i>Protect Their Health</h1>
+            <p class="lead text-muted mb-4">
+               Vaccines are essential for preventing dangerous diseases and ensuring your pet lives a long, healthy, and happy life.
+               Schedule their routine vaccinations or boosters today.
+            </p>
+             {# *** REPLACE IMAGE PATH *** #}
+            <img src="{{ url_for('static', filename='image/vet-vaccine-happy.jpg') }}" alt="Happy, healthy pet after a vet visit" class="img-fluid rounded shadow-lg vaccination-image">
+        </div>
+
+        {# Column 2: Vaccination Form #}
+        <div class="col-lg-7 col-xl-6">
+             <div class="form-container-wrapper">
+                <div class="form-container card shadow-sm">
+                     <div class="card-body p-4 p-lg-5">
+                        <h2 class="h4 mb-4 text-center">Book a Vaccination Appointment</h2>
+                         {# Flash messages handled in base.html #}
+
+                        <form id="vaccination-form" method="POST" action="{{ url_for('vaccination_page') }}">
+                            <div class="row mb-3">
+                                <div class="col-md-6"> <label for="owner-name" class="form-label">Owner Name</label> <input type="text" class="form-control form-control-sm" id="owner-name" name="owner_name" required value="{{ form_data.owner_name if form_data else '' }}"> </div>
+                                <div class="col-md-6"> <label for="pet-name" class="form-label">Pet Name</label> <input type="text" class="form-control form-control-sm" id="pet-name" name="pet_name" required value="{{ form_data.pet_name if form_data else '' }}"> </div>
+                            </div>
+                            <div class="mb-3"> <label for="pet-type" class="form-label">Type of Animal</label> <select class="form-select form-select-sm" id="pet-type" name="pet_type" required> <option value="" disabled selected>-- Select --</option> <option value="Dog">Dog</option> <option value="Cat">Cat</option> <option value="Bird">Bird</option> <option value="Other">Other</option> </select> </div>
+                             <div class="row mb-3">
+                                <div class="col-md-6"> <label for="vaccination-date" class="form-label">Preferred Date</label> <input type="date" class="form-control form-control-sm" id="vaccination-date" name="appointment_date" required value="{{ form_data.appointment_date if form_data else '' }}" min="{{ now.strftime('%Y-%m-%d') if now else '' }}"> </div>
+                                <div class="col-md-6"> <label for="vaccination-time" class="form-label">Preferred Time</label> <select class="form-select form-select-sm" id="vaccination-time" name="appointment_time" required> <option value="" disabled selected>-- Select --</option> <option value="Morning">Morning (9-12)</option> <option value="Afternoon">Afternoon (12-3)</option> <option value="Evening">Evening (3-6)</option> </select> </div>
+                            </div>
+                             <div class="form-text small mb-3">We'll contact you to confirm the exact appointment time based on availability.</div>
+                            <button type="submit" class="btn btn-primary w-100 mt-3">Request Appointment</button>
+                        </form>
+                     </div>
+                </div>
+             </div>
+        </div>
+    </div>
+</div>
+{# Inject 'now' for min date calculation #}
+{% set now = now if now else {} %}
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {# No specific JS needed for this page usually #}
+{% endblock %}

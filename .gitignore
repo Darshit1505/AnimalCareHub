@@ -1,0 +1,36 @@
+# Python / Virtual Environment
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables & Sensitive files (DO NOT COMMIT!)
+.env
+*.secret
+
+# Build outputs
+/build/
+/dist/
+.Python
+venv/
+env/
+
+# OS-specific temporary files
+.DS_Store           # macOS
+Thumbs.db           # Windows
+ehthumbs.db         # Windows
+Desktop.ini         # Windows
+$RECYCLE.BIN/       # Windows Recycle Bin
+
+# Specific uploaded/output files (add if you created these for testing locally)
+# The 'uploads/' directory itself should be committed but not its contents.
+/static/uploads/*
+!.gitkeep           # If you add an empty .gitkeep file in 'uploads' subfolders
+
+# Flask/Web Framework specific logs
+*.log
+
+# Common temporary editor files
+*.swp
+*~

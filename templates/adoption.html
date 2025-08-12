@@ -1,0 +1,852 @@
+{% extends "base.html" %}
+{% set page_active = 'adoption' %}
+{% block body_class %}adoption-page{% endblock %}
+
+{% block title %}Adopt a Pet - Pet's Paalan{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        /* Custom CSS specific to the adoption page */
+        .animal-listing { margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #eee; }
+        .animal-listing:last-child { border-bottom: none; }
+        .animal-listing h3 { color: var(--bs-primary); margin-top: 0.5rem; }
+        .animal-listing .img-fluid { max-width: 250px; height: auto; object-fit: cover; border-radius: var(--border-radius); }
+        .status-badge {
+             font-size: 0.8em;
+             padding: 0.3em 0.6em;
+             border-radius: 0.25rem;
+             font-weight: bold;
+             vertical-align: middle;
+             margin-left: 0.5em;
+        }
+        .status-available { background-color: var(--bs-success); color: #fff; }
+        .status-adopted { background-color: var(--bs-secondary); color: #fff; }
+         /* Adjust status badge colors as needed */
+
+         .form-section {
+             padding-top: 2rem;
+             margin-top: 2rem;
+             border-top: 1px solid #eee;
+         }
+
+         /* Simple styling for the card list view - adapt as needed */
+        .adoption-card {
+             /* Existing card styles from other templates */
+             transition: transform 0.3s ease;
+        }
+        .adoption-card:hover {
+             transform: translateY(-5px);
+        }
+        .animal-img {
+             width: 100%;
+             height: 200px; /* Fixed height for consistent card size */
+             object-fit: cover;
+             border-top-left-radius: var(--card-border-radius);
+             border-top-right-radius: var(--card-border-radius);
+        }
+        .animal-details {
+             min-height: 100px; /* Ensure consistent height for details block */
+        }
+
+
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+    {# Flash messages handled in base.html #}
+
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold">Meet Your New Best Friend</h1>
+        <p class="lead text-muted col-md-8 mx-auto">Find the perfect companion waiting for their forever home. Browse our available animals and start your adoption journey today!</p>
+    </div>
+
+     {# Animals List (using Bootstrap Cards) #}
+    <section class="animal-listings row g-4 justify-content-center mb-5">
+        {% if animals %}
+            {% for animal in animals %}
+                <div class="col-sm-6 col-md-4 col-lg-3 d-flex"> {# d-flex and h-100 for equal height cards #}
+                     <div class="card adoption-card shadow-sm h-100 w-100"> {# Use w-100 #}
+                        {# Placeholder or actual image if available #}
+                         {% set img_src = animal.image_url if animal.image_url else url_for('static', filename='image/animal_placeholder.jpg') %}
+                        <img src="{{ img_src }}" class="card-img-top animal-img" alt="Photo of {{ animal.name | default('animal') }}">
+                        <div class="card-body d-flex flex-column"> {# d-flex flex-column for sticky button #}
+                            <h5 class="card-title mb-0">{{ animal.name }}</h5>
+                            {# --- CORRECTED AGE FORMATTING LOGIC WITH PLURALIZATION FIX --- #}
+                            <p class="card-text text-muted small mb-1">{{ animal.type}}{% if animal.age is not none %},
+                                {% set age_float = animal.age|float %}
+                                {% if age_float is defined %}
+                                    {% set age_int = age_float|int %}
+                                    {% if age_float == age_int %}
+                                        {{ age_int }} year{{ 's' if age_int != 1 else '' }} old {# Added correct plural for year #}
+                                    {% else %}
+                                        {{ "%.1f"|format(age_float) }} years old
+                                    {% endif %}
+                                {% else %}
+                                    Age N/A
+                                {% endif %}
+                            {% else %} Age N/A{% endif %}</p>
+                            {# --- END CORRECTED AGE FORMATTING LOGIC --- #}
+
+                            <div class="animal-details flex-grow-1 mb-2"> {# Content area that expands #}
+                                <p class="card-text small">{{ animal.description | default('No description available.') | truncate(100, True) }}</p> {# Truncate long descriptions #}
+                             </div>
+
+                            {# Action Button (Open Modal) - TEXT CHANGED TO JUST "ADOPT" #}
+                            <button type="button" class="btn btn-primary btn-sm mt-auto" {# Use mt-auto to push to bottom #}
+                                    data-bs-toggle="modal"             {# Tell Bootstrap to open a modal #}
+                                    data-bs-target="#adoptionModal"    {# Specify which modal to open #}
+                                    data-animal-id="{{ animal.animal_id }}" {# Store the animal's ID #}
+                                    data-animal-name="{{ animal.name }}">   {# Store the animal's Name for the modal title #}
+                                ADOPT {# <-- Text changed here #}
+                            </button>
+
+                         </div>
+                         {# Optional Card Footer #}
+                         {#
+                         <div class="card-footer bg-transparent border-top text-muted small">
+                             Status: <span class="status-badge status-{{ animal.status|lower|replace(' ', '-') }}">{{ animal.status }}</span>
+                         </div>
+                         #}
+                     </div>
+                 </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                 <div class="alert alert-info text-center" role="alert">
+                    <i class="fas fa-info-circle me-2"></i> No animals are currently available for adoption. Please check back later!
+                 </div>
+             </div>
+        {% endif %}
+    </section>
+
+
+    {# --- Post Animal Form Section (if user is logged in) --- #}
+    {% if session.user_id %}
+        <section class="form-section card shadow-sm p-4 mx-auto" id="post-form-section" style="max-width: 600px;">
+             <h2 class="h4 text-center mb-4">List An Animal For Adoption</h2>
+             <div id="postAnimalFeedback" class="mb-3"></div> {# Area for AJAX feedback #}
+
+             <form id="postAnimalForm" method="POST" action="{{ url_for('post_animal') }}" enctype="multipart/form-data" novalidate> {# Added novalidate here too #}
+                <div class="mb-3"> <label for="animalName" class="form-label">Name <span class="text-danger">*</span></label> <input type="text" class="form-control form-control-sm" id="animalName" name="animalName" required> <div class="invalid-feedback">Name is required.</div> </div>
+                <div class="mb-3"> <label for="animalType" class="form-label">Type <span class="text-danger">*</span></label> <select class="form-select form-select-sm" id="animalType" name="animalType" required> <option value="" disabled selected>-- Select Type --</option> <option value="Dog">Dog</option> <option value="Cat">Cat</option> <option value="Other">Other</option> </select> <div class="invalid-feedback">Type is required.</div> </div>
+                <div class="mb-3"> <label for="animalAge" class="form-label">Approx. Age (Years) <span class="text-danger">*</span></label> <input type="number" class="form-control form-control-sm" id="animalAge" name="animalAge" step="0.1" min="0" required> <div class="form-text small">e.g., 2, 1.5</div><div class="invalid-feedback">Age is required and must be a non-negative number.</div> </div>
+                <div class="mb-3"> <label for="animalDescription" class="form-label">Description <span class="text-danger">*</span></label> <textarea class="form-control form-control-sm" id="animalDescription" name="animalDescription" rows="3" required></textarea> <div class="invalid-feedback">Description is required.</div> </div>
+                <div class="mb-3">
+                     <label for="animalImage" class="form-label">Upload Image <small class="text-muted">(Recommended)</small></label> {# Removed required for recommended #}
+                    <input type="file" class="form-control form-control-sm" id="animalImage" name="animalImage" accept="image/png, image/jpeg, image/gif">
+                    <div class="form-text small">Accepted image formats: PNG, JPG, GIF</div>
+                     <div class="invalid-feedback">Invalid file type or upload error.</div> {# Keep generic feedback #}
+                </div>
+                 <div class="text-center">
+                     <button type="submit" class="btn btn-success mt-3 px-4" id="postAnimalButton">POST ANIMAL FOR ADOPTION</button>
+                 </div>
+             </form>
+        </section>
+    {% else %}
+         <div class="alert alert-info text-center mt-5" role="alert">
+            <i class="fas fa-user-plus me-2"></i> Interested in listing an animal for adoption? Please <a href="{{ url_for('login') }}?next={{ url_for('adoption_page') }}#post-form-section" class="alert-link">log in</a> or <a href="{{ url_for('register') }}" class="alert-link">register</a>.
+         </div>
+    {% endif %}
+
+
+{# --- Adoption Request Modal --- #}
+<div class="modal fade" id="adoptionModal" tabindex="-1" aria-labelledby="adoptionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg"> {# Center the modal and make it large #}
+        <div class="modal-content">
+            <div class="modal-header">
+                {# Updated Modal Title Structure #}
+                <h5 class="modal-title" id="adoptionModalLabel">Adoption Request for <span id="modalAnimalName" class="fw-bold text-primary">Animal</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {# AREA TO DISPLAY FEEDBACK #}
+                <div id="modalFeedback" class="mb-3">
+                     {# JavaScript will populate this with alerts #}
+                </div>
+
+                {# Form starts here. Moved inside modal-body. #}
+                <form id="modalAdoptionForm" method="POST" action="" enctype="multipart/form-data" novalidate> {# Added novalidate #}
+                    {# We'll dynamically set the action URL in JavaScript #}
+                    {# No need for hidden animal_id field here, it's in the action URL #}
+
+                    <div class="mb-3">
+                        <label for="adopterName" class="form-label">Your Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="adopterName" name="adopterName" required>
+                         <div class="invalid-feedback">Name is required.</div> {# Bootstrap validation feedback #}
+                    </div>
+                    <div class="mb-3">
+                        <label for="adopterEmail" class="form-label">Your Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control form-control-sm" id="adopterEmail" name="adopterEmail" required>
+                         <div class="invalid-feedback">Valid email is required.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="adopterPhoto" class="form-label">Upload Your Photo <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control form-control-sm" id="adopterPhoto" name="adopterPhoto" accept="image/png, image/jpeg, image/gif" required> {# Be specific with accept #}
+                        <div class="form-text small">Accepted formats: PNG, JPG, GIF</div>
+                        <div class="invalid-feedback">A photo is required and must be a valid image type.</div>
+                    </div>
+                     <div class="mb-3">
+                         <label for="adopterAadhaar" class="form-label">Upload ID Proof (e.g., Aadhaar, Driver's License) <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control form-control-sm" id="adopterAadhaar" name="adopterAadhaar" accept="image/png, image/jpeg, image/gif, application/pdf" required> {# Be specific with accept #}
+                        <div class="form-text small">Accepted formats: PNG, JPG, GIF, PDF. Information handled securely.</div>
+                        <div class="invalid-feedback">An ID proof is required and must be a valid image or PDF type.</div>
+                    </div>
+
+                    {# Form actions section remains, adjusted slightly #}
+                     <div class="text-center">
+                         <button type="submit" class="btn btn-primary mt-3 px-4" id="submitRequestButton">Submit Request</button>
+                         <button type="button" class="btn btn-secondary mt-2 px-4" data-bs-dismiss="modal">Cancel</button> {# Add a cancel button #}
+                    </div>
+                </form>
+            </div>
+            {# Optional <div class="modal-footer">...</div> #}
+        </div>
+    </div>
+</div>
+{# --- End Adoption Request Modal --- #}
+
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }} {# Keep existing scripts from base.html #}
+    <script>
+        // Ensure we get these elements once the DOM is ready or near ready
+        const adoptionModal = document.getElementById('adoptionModal');
+        const modalAdoptionForm = document.getElementById('modalAdoptionForm');
+        const modalFeedback = document.getElementById('modalFeedback'); // Area to show messages
+        const modalAnimalNameSpan = document.getElementById('modalAnimalName'); // Span inside modal title to show animal name
+        const submitRequestButton = document.getElementById('submitRequestButton');
+        // Safely get reference to modal elements and form controls on load
+        // Query all relevant form controls within the modal form once on load for efficiency
+         const modalFormControls = modalAdoptionForm ? modalAdoptionForm.querySelectorAll('input:not([type="hidden"]), textarea, select, button[type="submit"], button[data-bs-dismiss="modal"]') : null;
+         console.log(`DEBUG: Modal form controls found on initial load: ${modalFormControls ? modalFormControls.length : 'null'}. Form found: ${modalAdoptionForm ? true : false}`);
+
+
+        // Function to set the enabled/disabled state and text of the modal form elements
+        // Takes true to disable (is submitting) or false to enable (not submitting)
+       function setAdoptionModalState(isSubmitting = false, buttonText = 'Submit Request') {
+            // Only proceed if the form controls NodeList was found
+            if (!modalFormControls) {
+                 console.warn("setAdoptionModalState called but modalFormControls NodeList not found. Cannot set state.");
+                 return;
+            }
+
+            console.log(`DEBUG: Calling setAdoptionModalState: isSubmitting = ${isSubmitting}, buttonText = "${buttonText}". Iterating through controls...`);
+
+            modalFormControls.forEach(control => {
+                // Set disabled state for each control. This covers inputs, textareas, selects, and the Cancel/Submit buttons (via type="submit" or data-bs-dismiss)
+                control.disabled = isSubmitting;
+            });
+             // Re-enabled log when state is false:
+            if (!isSubmitting) {
+                 console.log("DEBUG: Finished setting modal form state to ENABLED.");
+            } else {
+                console.log("DEBUG: Finished setting modal form state to DISABLED.");
+            }
+
+
+           // Update the submit button's text explicitly
+           if (submitRequestButton) {
+                // Set button text based on isSubmitting state or provided buttonText
+                if (isSubmitting) {
+                    submitRequestButton.textContent = buttonText || 'Submitting...'; // Use 'Submitting...' as default if not provided
+                } else { // If !isSubmitting
+                   submitRequestButton.textContent = buttonText || 'Submit Request'; // Use 'Submit Request' as default if not provided
+                }
+           } else {
+               console.warn("setAdoptionModalState called but submitRequestButton not found.");
+           }
+
+            console.log("DEBUG: Exited setAdoptionModalState function.");
+       }
+
+
+        // Listen for the modal's 'show.bs.modal' event (Fires BEFORE modal is fully shown, during transition)
+        // This event is triggered by Bootstrap JS when a modal is initiated to open.
+        if (adoptionModal) { // Check if modal element was found on load
+            adoptionModal.addEventListener('show.bs.modal', function (event) {
+                 console.log("DEBUG: >>> Adoption modal 'show.bs.modal' event fired. Modal is about to open.");
+
+                // Get the element that triggered the modal (usually the button)
+                const button = event.relatedTarget;
+
+                // Safely get animal data from the trigger button's data attributes
+                const animalId = button ? button.getAttribute('data-animal-id') : null;
+                const animalName = button ? button.getAttribute('data-animal-name') : null;
+
+                console.log(`DEBUG: Triggered by animal ID: ${animalId}, Name: ${animalName}.`);
+
+                // Update the modal's title with the animal's name. Prioritize span if it exists.
+                const mainModalTitle = this.querySelector('.modal-title'); // Get the main title element
+                if (modalAnimalNameSpan && animalName) { // If the span element exists and animalName is valid
+                   modalAnimalNameSpan.textContent = animalName;
+                } else if (mainModalTitle) { // If span not found or name missing, update main title generically
+                     mainModalTitle.textContent = animalName ? `Adoption Request for ${animalName}` : 'Adoption Request'; // Set the whole title if span isn't used or name missing
+                     console.warn("DEBUG: '#modalAnimalName' span not found or animal name missing, setting generic modal title:", mainModalTitle.textContent);
+                } else {
+                    console.error("ERROR: Modal title element '.modal-title' not found.");
+                }
+
+
+                // Set the modal form's action URL dynamically for the specific animal
+                // We use a Jinja template variable that includes a '0' placeholder for the ID.
+                if (modalAdoptionForm && animalId) { // If the form and animal ID are found
+                     const formActionUrlTemplate = "{{ url_for('submit_adoption', animal_id=0) }}"; // Jinja2 template string
+                    modalAdoptionForm.action = formActionUrlTemplate.replace('/0', '/' + animalId); // Replace placeholder ID to get the final URL
+                     console.log("DEBUG: Modal form action set to:", modalAdoptionForm.action);
+                } else if (!modalAdoptionForm) {
+                     console.error("ERROR: '#modalAdoptionForm' element not found when modal shows!");
+                } else if (!animalId) {
+                     console.error("ERROR: Animal ID missing from trigger button's data-animal-id attribute when modal shows!");
+                }
+
+
+                // Clear out any previous error/success messages displayed inside the modal
+                if (modalFeedback) modalFeedback.innerHTML = '';
+
+                // Reset the form fields (input values, checkbox/radio checked states, etc.)
+                if (modalAdoptionForm) {
+                    modalAdoptionForm.reset(); // Bootstrap/browser form reset
+
+                     // Explicitly handle clearing file input values, which .reset() doesn't always visually clear
+                     console.log("DEBUG: Resetting modal form and attempting explicit file input reset.");
+                    const fileInputs = modalAdoptionForm.querySelectorAll('input[type="file"]');
+                    fileInputs.forEach(input => {
+                        input.value = ''; // Set the value to empty string
+                    });
+
+                     // Remove Bootstrap client-side validation styling (invalid, valid, was-validated classes)
+                     modalAdoptionForm.classList.remove('was-validated');
+                     console.log("DEBUG: Modal form reset complete.");
+                }
+
+
+                // --- Explicitly set modal form inputs to ENABLED state using the helper ---
+                // This should counter any initial disabled state or residual state from a previous interaction.
+                 setAdoptionModalState(false, 'Submit Request'); // Set disabled = false, reset button text
+
+            }); // End of 'show.bs.modal' listener
+
+
+             // Listen for the modal's 'shown.bs.modal' event (Fires AFTER the modal is fully visible, CSS transitions complete)
+         if (adoptionModal) { // Check if modal element was found
+            adoptionModal.addEventListener('shown.bs.modal', function() {
+                console.log("DEBUG: >>> Adoption modal 'shown.bs.modal' event fired. Modal is fully visible.");
+
+                 // Set focus to the first input field for UX/accessibility, wrapping in a small timeout
+                // in case the browser is still processing layout after the 'shown' event.
+                 const firstInput = modalAdoptionForm ? modalAdoptionForm.querySelector('input:not([type="hidden"]), textarea, select') : null; // Find the first visible input
+                 if (firstInput) {
+                     // Add a very small timeout. Bootstrap modals have transitions.
+                     setTimeout(() => {
+                         try {
+                             firstInput.focus();
+                             console.log("DEBUG: Set focus to first input:", firstInput.id || firstInput.name || firstInput.tagName);
+                         } catch (e) {
+                             // Catch potential errors if focus fails (e.g., element is truly not interactable or hidden)
+                             console.warn("DEBUG: Could not set focus to first input. Error:", e);
+                         }
+                     }, 50); // Delay in milliseconds - adjust if needed
+                 } else {
+                     console.log("DEBUG: Could not find a suitable first input in the modal form to set focus.");
+                 }
+
+
+            }); // End of 'shown.bs.modal' listener
+
+
+             // Listen for the modal's 'hidden.bs.modal' event (Fires AFTER modal is fully hidden)
+         if (adoptionModal) { // Check if modal element exists
+            adoptionModal.addEventListener('hidden.bs.modal', function (event) {
+                 console.log("DEBUG: >>> Adoption modal 'hidden.bs.modal' event fired. Modal is now hidden. Resetting state for next open.");
+                // Clear out previous feedback messages and reset the form fields visually
+                if (modalFeedback) modalFeedback.innerHTML = ''; // Clear any success/error messages
+                if (modalAdoptionForm) {
+                     modalAdoptionForm.reset(); // Resets form inputs (values, checked states etc.)
+                     modalAdoptionForm.classList.remove('was-validated'); // Remove Bootstrap validation styling classes
+
+                     // Explicitly clear file input values for visual reset
+                     const fileInputs = modalAdoptionForm.querySelectorAll('input[type="file']');
+                    fileInputs.forEach(input => {
+                        input.value = ''; // Set the value to empty string
+                    });
+                    console.log("DEBUG: Modal form reset and file inputs cleared.");
+                } else {
+                    console.warn("DEBUG: '#modalAdoptionForm' not found on hidden event.");
+                }
+
+
+                // Ensure state is fully reset and inputs are enabled (important if the modal is opened again quickly)
+                 setAdoptionModalState(false, 'Submit Request');
+                 console.log("DEBUG: Modal state reset and controls ENABLED on hidden event, preparing for next show.");
+
+            }); // End of 'hidden.bs.modal' listener
+         } // End if(adoptionModal) for hidden listener
+         else {
+            console.error("ERROR: '#adoptionModal' element not found in the DOM for adding event listeners (on load). Script initialization may have failed."); // Log if modal wasn't found initially
+         }
+
+
+        // Listen for the modal form's submit event (Submit Request button click inside modal)
+        // This event fires when the submit button within the modal form is clicked,
+        // OR when hitting Enter in a text field within the form.
+        if (modalAdoptionForm) { // Check if form element exists before adding listener
+             console.log("DEBUG: Adding submit listener to '#modalAdoptionForm'.");
+            modalAdoptionForm.addEventListener('submit', async function(event) {
+                event.preventDefault(); // Prevent the browser's default form submission (page reload)
+                 console.log("DEBUG: >>> Modal form submit event fired. Preventing default submission.");
+
+                // Clear any previous feedback message inside the modal feedback area
+                 if (modalFeedback) modalFeedback.innerHTML = '';
+                // Remove Bootstrap client-side validation styles from the form at the start of submission
+                 this.classList.remove('was-validated');
+
+
+                // --- Client-side Validation Check ---
+                // Use the browser's built-in form validation check based on 'required', 'type' attributes, etc.
+                if (!this.checkValidity()) {
+                     // If checkValidity returns false (form is invalid client-side)
+                     this.classList.add('was-validated'); // Add Bootstrap's class to show validation feedback visuals (borders, icons, messages)
+                     console.log("DEBUG: Modal form client-side validation FAILED.");
+                     // Display a general client-side error message inside the modal feedback area
+                     if(modalFeedback) modalFeedback.innerHTML = '<div class="alert alert-danger small p-2" role="alert">Please fill in all required fields correctly (client-side check).</div>';
+                     // Keep inputs enabled here so user can correct them.
+                     return; // Stop the asynchronous submit process
+                 }
+                 // If checkValidity returns true (form is valid client-side)
+                 console.log("DEBUG: Modal form client-side validation PASSED.");
+
+
+                // --- Capture Form Data & Files ---
+                // Create FormData object FROM the form element. This is crucial!
+                // It must happen BEFORE disabling elements if you want their values included.
+                const formData = new FormData(this);
+                 console.log("DEBUG: FormData created from modal form.");
+
+
+                // --- Set Modal Form State to Submitting ---
+                // Now, after capturing the data, disable form inputs and update the submit button text.
+                // Use the helper function to handle disabling inputs and setting button state.
+                setAdoptionModalState(true, 'Submitting...');
+                 console.log("DEBUG: Modal form state set to submitting (inputs disabled).");
+
+
+                // --- Send Data to Server via Fetch API ---
+                try {
+                    // Send the formData object via an asynchronous POST request to the form's action URL.
+                     console.log("DEBUG: Sending fetch POST request to", this.action);
+                    const response = await fetch(this.action, {
+                        method: 'POST',
+                        body: formData // FormData automatically sets the correct Content-Type header ('multipart/form-data') when used directly as the body
+                    });
+                     console.log("DEBUG: Received modal form fetch response. Status:", response.status, response.statusText);
+
+                    // Check if the HTTP response status indicates an error (not in the 2xx range)
+                    if (!response.ok) {
+                         // If server returned an error status (4xx or 5xx)
+                         // Attempt to parse the response body as JSON for a server-provided message,
+                         // with a fallback to reading it as text if the Content-Type is not JSON.
+                          const contentType = response.headers.get("content-type");
+                          const errorData = (contentType && contentType.indexOf("application/json") !== -1)
+                                           ? await response.json().catch(() => null) // Try JSON parse, catch potential errors
+                                           : await response.text().catch(() => null); // If not JSON, try text, catch errors
+
+                         // Create a new Error object to throw to the catch block.
+                         // Include the HTTP status and prioritize server-provided message.
+                         // Limit text length to avoid huge error messages if entire HTML page is returned.
+                         const error = new Error(errorData?.message || (typeof errorData === 'string' && errorData.length < 200 ? errorData : `Server returned status ${response.status}`));
+                         error.status = response.status; // Attach the HTTP status code to the error object
+                         error.data = errorData; // Attach the raw or parsed data received from the server
+                         console.error('DEBUG: Modal form received non-OK response (Error condition). Status:', error.status, 'Message:', error.message, 'Server Data:', error.data);
+                         throw error; // Jump to the catch block to handle this error response
+
+                     } // End if (!response.ok)
+
+                    // --- Handle Successful Response (HTTP status 2xx) ---
+                    console.log("DEBUG: Modal form received OK response (Success condition). Parsing JSON result.");
+                    const result = await response.json(); // Parse the successful JSON response (assuming your Flask endpoint returns {'success': bool, 'message': string})
+                    console.log("DEBUG: Modal form JSON result:", result);
+
+                    // Clear previous feedback messages in the modal feedback area
+                    if(modalFeedback) modalFeedback.innerHTML = '';
+
+                    // Check the 'success' property from the server's JSON response
+                    if (result.success) {
+                        // Server reported success: true (operation successful according to backend logic)
+                        console.log("DEBUG: Modal form Server reported SUCCESS: ", result.message);
+                        // Display a success message inside the modal
+                        if(modalFeedback) modalFeedback.innerHTML = '<div class="alert alert-success small p-2" role="alert">' + result.message + '</div>';
+
+                        // Keep inputs disabled briefly after successful submission to indicate completion
+                        setAdoptionModalState(true, 'Submitted!'); // Keep inputs disabled, show 'Submitted!'
+
+                        // Automatically close the modal after a short delay for good user experience
+                         setTimeout(() => {
+                           // Get the Bootstrap modal instance (if not already cached, or re-query)
+                           const modalInstance = bootstrap.Modal.getInstance(adoptionModal); // Safe way to get the Bootstrap instance
+                           if (modalInstance) {
+                               modalInstance.hide(); // Hide the modal using Bootstrap's JS
+                           } else {
+                               // Fallback if instance isn't found
+                                console.warn("DEBUG: Bootstrap Modal instance not found for closing.");
+                           }
+                           console.log("DEBUG: Modal scheduled to close after success.");
+                        }, 2000); // Close modal after 2 seconds
+
+
+                    } else {
+                         // Server reported success: false (e.g., server-side custom validation failed, even though HTTP status was OK 200)
+                         console.warn("DEBUG: Modal form Server reported FAILURE: ", result.message);
+                        if(modalFeedback) modalFeedback.innerHTML = '<div class="alert alert-danger small p-2" role="alert">' + (result.message || 'Server reported an issue. Please check your information.') + '</div>';
+
+                        // Re-enable form inputs so the user can correct their submission
+                        setAdoptionModalState(false, 'Submit Request'); // Set disabled to false, reset button text
+
+                        // If the failure is due to validation, add was-validated class to show client-side feedback based on required/pattern attributes etc.
+                        // This assumes that a 'success: false' from the server for a 200 OK indicates a validation-like failure.
+                         this.classList.add('was-validated'); // Adds Bootstrap's 'was-validated' class to trigger error styles on relevant fields.
+                         console.log("DEBUG: Added 'was-validated' class to form on server success:false response.");
+                    }
+                } catch (error) {
+                    // --- Handle Errors during Fetch, Response Processing, or specific 4xx/5xx errors ---
+                    console.error('Modal form Submission Exception Caught:', error); // Log the full error object for debugging
+
+                    // Clear previous feedback message
+                    if(modalFeedback) modalFeedback.innerHTML = '';
+
+                    let displayMessage = 'An unexpected error occurred during submission.'; // Default generic error message for the user
+
+                    // Check if the error object has a 'status' property (implies it came from !response.ok check for HTTP errors)
+                     if (error.status) {
+                         if (error.status === 401) { // Handle Unauthorized (401) specifically (Session expired)
+                             displayMessage = error.message || 'Your session expired. Please log in.';
+                             // Display a temporary flash message on the main page
+                             if (typeof flashMessage === 'function') flashMessage('warning', displayMessage);
+
+                             // Hide the modal gracefully
+                              const modalInstance = bootstrap.Modal.getInstance(adoptionModal);
+                             if (modalInstance) modalInstance.hide();
+                              console.log("DEBUG: Hiding modal due to 401.");
+                             // Redirect the user to the login page, preserving the current URL (minus the modal hash)
+                             const currentUrlWithoutHash = window.location.href.split('#')[0];
+                             const targetUrl = "{{ url_for('login') }}?next=" + encodeURIComponent(currentUrlWithoutHash);
+                             console.log("DEBUG: Redirecting to login page:", targetUrl);
+                             // Redirect after a brief delay so the user can see the flash message or modal close animation
+                             setTimeout(() => { window.location.href = targetUrl; }, 500); // Redirect after 0.5 seconds
+
+                            return; // Exit the catch block for 401 since we are redirecting
+
+                         } else if (error.status >= 400 && error.status < 500) { // Handle other Client-side errors (e.g., 400, 403, 409)
+                            // These include server-side validation errors that returned a 400, Forbidden access (403), or Conflicts (409 like animal already adopted).
+                             // Use the server's message if available, otherwise a generic status message.
+                            displayMessage = error.message || `Error (${error.status}): Invalid request or status.`;
+                             console.error("DEBUG: Modal form Client error received:", error.status, displayMessage, 'Server Data:', error.data);
+                            // For client-related errors (likely due to input), re-add the was-validated class to visually show potential issues on the form fields.
+                             this.classList.add('was-validated'); // Trigger Bootstrap's visual feedback on form elements with validation constraints
+
+
+                         } else if (error.status >= 500) { // Handle Server-side errors (e.g., 500 Internal Server Error)
+                            displayMessage = error.message || `Server Error (${error.status}): An internal issue occurred. Please try again.`;
+                             console.error("DEBUG: Modal form Server error received:", error.status, displayMessage);
+                             // For server errors (5xx), the issue is likely on the server, not user input, so do not add was-validated.
+                         } else {
+                             // Catch any other unexpected HTTP status codes
+                             displayMessage = error.message || `Response Status (${error.status}): Unhandled server response status.`;
+                             console.error("DEBUG: Modal form Unhandled response status error:", error.status, displayMessage);
+                         }
+                     } else {
+                         // This branch catches errors that happen *before* a status code is received,
+                         // such as network errors (browser is offline), problems with the Fetch request setup,
+                         // or errors parsing the response body when it wasn't JSON/text as expected.
+                          displayMessage = 'Could not connect to the server or a network issue occurred. Please check your internet connection and try again.';
+                          console.error("DEBUG: Modal form Network or Fetch API error:", error);
+                      }
+
+                    // Display the determined error message to the user inside the modal's feedback area
+                    if(modalFeedback) modalFeedback.innerHTML = '<div class="alert alert-danger small p-2" role="alert">' + displayMessage + '</div>';
+
+                    // Re-enable the form inputs so the user can attempt submission again.
+                    // This is needed unless the user was redirected (handled by 401 case).
+                    setAdoptionModalState(false, 'Submit Request'); // Set disabled back to false, reset button text
+
+                } // End of Modal Submit Catch block
+            }); // End of modalAdoptionForm submit event listener
+        } else {
+            console.error("ERROR: '#modalAdoptionForm' element not found in the DOM. Cannot attach submit listener."); // Log if modal form not found on page load
+        }
+
+
+        // --- AJAX Form Submission for Post Animal ---
+         // This listener handles the form for posting a new animal to the adoption page.
+         const postAnimalForm = document.getElementById('postAnimalForm');
+         const postAnimalFeedback = document.getElementById('postAnimalFeedback'); // Feedback area for this form
+         const postAnimalButton = document.getElementById('postAnimalButton'); // The submit button for this form
+
+         if (postAnimalForm) { // Check if the Post Animal form element exists (it only does if user is logged in)
+             console.log("DEBUG: Post Animal form found, adding submit listener.");
+              // Query controls once on load for efficiency, ensures we target correct elements.
+             const postFormControls = postAnimalForm.querySelectorAll('input:not([type="hidden"]), textarea, select, button[type="submit"]');
+              console.log(`DEBUG: Post Animal form controls found on load: ${postFormControls ? postFormControls.length : 'null'}.`);
+
+             // Function to set the enabled/disabled state and text for the Post Animal form
+             // Selects all form controls specifically within THIS form for clarity
+             function setPostAnimalFormState(disabled = true, buttonText = 'POST ANIMAL FOR ADOPTION') {
+                   // Use the cached NodeList of post form controls
+                   if (!postFormControls || postFormControls.length === 0) {
+                       console.warn("setPostAnimalFormState called but postFormControls NodeList not found/empty. Cannot set state.");
+                       return;
+                   }
+
+                   console.log(`DEBUG: Calling setPostAnimalFormState for Post Animal form: disabled=${disabled}, buttonText="${buttonText}". Iterating through controls...`);
+
+                   postFormControls.forEach(control => {
+                        control.disabled = disabled; // Set disabled state
+                   });
+
+                   // Update the submit button text explicitly
+                   if (postAnimalButton) { // Double check button exists
+                       if (disabled) {
+                          postAnimalButton.textContent = buttonText || 'Posting...';
+                       } else { // If enabling
+                          postAnimalButton.textContent = buttonText || 'POST ANIMAL FOR ADOPTION';
+                       }
+                       console.log("DEBUG: Post Animal button text set:", postAnimalButton.textContent);
+                   } else {
+                      console.warn("setPostAnimalFormState called but postAnimalButton not found.");
+                   }
+
+                   console.log("DEBUG: Exited setPostAnimalFormState function for Post Animal form.");
+                }
+
+
+            // Add submit event listener to the Post Animal form
+            postAnimalForm.addEventListener('submit', async function(event) {
+                event.preventDefault(); // Prevent the browser's default form submission (page reload)
+                console.log("DEBUG: >>> Post Animal form submit event fired.");
+
+                 // Clear previous feedback message area
+                 if (postAnimalFeedback) postAnimalFeedback.innerHTML = '';
+                 // Remove Bootstrap client-side validation styling from the form at the start of submission
+                 this.classList.remove('was-validated');
+
+
+                 // --- Client-side Validation Check for Post Animal Form ---
+                 // Use the browser's built-in checkValidity() based on HTML 'required', 'type', 'min', 'step' attributes etc.
+                if (!this.checkValidity()) {
+                     // If validation fails client-side
+                     this.classList.add('was-validated'); // Add Bootstrap's class to trigger visual feedback on fields
+                     console.log("DEBUG: Post Animal Client-side validation FAILED.");
+                     // Display a general client-side error message
+                     if(postAnimalFeedback) postAnimalFeedback.innerHTML = '<div class="alert alert-danger small p-2" role="alert">Please fill in all required fields correctly (client-side check).</div>';
+                     // Keep form enabled here so user can fix errors
+                     return; // Stop the submit process
+                 }
+                 // If client-side validation passed
+                 console.log("DEBUG: Post Animal Client-side validation PASSED.");
+
+
+                // --- Capture Post Animal Form Data & Files ---
+                // Create FormData object FROM the form element. This is crucial!
+                // Must happen BEFORE disabling inputs if you want their values.
+                const formData = new FormData(this);
+                 console.log("DEBUG: FormData created from Post Animal form.");
+
+                // --- Set State to Submitting for Post Animal Form ---
+                // Now, disable form inputs and update the button text.
+                setPostAnimalFormState(true, 'Posting...');
+                console.log("DEBUG: Post Animal form state set to submitting.");
+
+
+                // --- Send Post Animal Data via Fetch API ---
+                try {
+                    // Send the formData via asynchronous POST request to the form's action URL.
+                     console.log("DEBUG: Sending fetch POST request to", this.action);
+                    const response = await fetch(this.action, {
+                        method: 'POST',
+                        body: formData // FormData sets the correct multipart/form-data header automatically
+                    });
+                     console.log("DEBUG: Received Post Animal fetch response. Status:", response.status, response.statusText);
+
+                    // Check for HTTP response errors (status codes outside 2xx)
+                     if (!response.ok) {
+                         // Attempt to parse response body (JSON or text) for server message on error
+                          const contentType = response.headers.get("content-type");
+                          const errorData = (contentType && contentType.indexOf("application/json") !== -1)
+                                           ? await response.json().catch(() => null) // Try JSON, catch errors
+                                           : await response.text().catch(() => null); // Try text, catch errors
+
+                         // Create error object with status and server message/text
+                         const error = new Error(errorData?.message || (typeof errorData === 'string' && errorData.length < 200 ? errorData : `Server returned status ${response.status}`));
+                         error.status = response.status; // Attach HTTP status code
+                         error.data = errorData; // Attach server response data
+                         console.error('DEBUG: Post Animal received non-OK response (Error condition). Status:', error.status, 'Message:', error.message, 'Server Data:', error.data);
+                         throw error; // Go to the catch block
+
+                     } // End if (!response.ok)
+
+                    // --- Handle Successful Response (HTTP status 2xx) ---
+                     console.log("DEBUG: Post Animal received OK response. Parsing JSON result.");
+                    const result = await response.json(); // Parse JSON response (expected: {'success': bool, 'message': string})
+                    console.log("DEBUG: Post Animal JSON result:", result);
+
+                    // Clear previous feedback message area
+                    if (postAnimalFeedback) postAnimalFeedback.innerHTML = '';
+
+                    if (result.success) {
+                        // Server reported success: true (backend logic successful)
+                        console.log("DEBUG: Post Animal Server reported SUCCESS: ", result.message);
+                        // Display success message
+                        if(postAnimalFeedback) postAnimalFeedback.innerHTML = '<div class="alert alert-success small p-2" role="alert">' + result.message + '</div>';
+
+                         // Clear form fields after success and remove validation styling
+                         this.reset(); // Resets form values
+                         this.classList.remove('was-validated'); // Clear validation styles
+                         // Keep inputs disabled briefly to signify success state
+                         setPostAnimalFormState(true, 'Posted!'); // Disabled=true, text 'Posted!'
+
+                         // Re-enable form after a short delay and hide success message
+                         setTimeout(() => {
+                             if (postAnimalFeedback) postAnimalFeedback.innerHTML = ''; // Hide success message div
+                             setPostAnimalFormState(false, 'POST ANIMAL FOR ADOPTION'); // Set disabled back to false, reset button text
+                             // Consider: Automatically update the animal list or redirect after posting?
+                         }, 5000); // Keep "Posted!" message visible for 5 seconds
+
+
+                    } else {
+                         // Server reported success: false (e.g., server-side custom validation, even if HTTP status was 200)
+                         console.warn("DEBUG: Post Animal Server reported FAILURE: ", result.message);
+                        if(postAnimalFeedback) postAnimalFeedback.innerHTML = '<div class="alert alert-danger small p-2" role="alert">' + (result.message || 'Server reported an issue. Please check your information.') + '</div>';
+
+                        // Re-enable form inputs so user can correct/retry
+                        setPostAnimalFormState(false, 'POST ANIMAL FOR ADOPTION'); // Set disabled to false, reset button text
+
+                        // Server-side failure often implies validation. Re-add was-validated to show client-side feedback based on HTML attributes.
+                         this.classList.add('was-validated'); // Adds was-validated class to trigger validation visuals on fields.
+                         console.log("DEBUG: Added 'was-validated' class to form on server success:false response.");
+                    }
+                } catch (error) {
+                    // This catch block handles: Network errors, HTTP 4xx/5xx errors, JSON/Text parsing errors, other JS errors during try block
+                    console.error('Post Animal Submission Exception Caught:', error);
+
+                    // Clear previous feedback messages
+                    if(postAnimalFeedback) postAnimalFeedback.innerHTML = '';
+
+                    let displayMessage = 'An unexpected error occurred during posting.'; // Default user message
+
+
+                    // Check the error object's status property if available (indicates HTTP error from server)
+                     if (error.status) {
+                         if (error.status === 401) { // Handle Unauthorized (401) - Session expired
+                              displayMessage = error.message || 'Your session expired. Please log in.';
+                               // Simulate a flash message on the main page
+                             if (typeof flashMessage === 'function') flashMessage('warning', displayMessage);
+                             // Redirect to login, preserving the current page (minus modal hash)
+                             const currentUrlWithoutHash = window.location.href.split('#')[0];
+                             const targetUrl = "{{ url_for('login') }}?next=" + encodeURIComponent(currentUrlWithoutHash);
+                             console.log("DEBUG: Post Animal Redirecting to login due to 401:", targetUrl);
+                             setTimeout(() => { window.location.href = targetUrl; }, 500); // Redirect after small pause
+                             return; // Exit catch block
+
+                         } else if (error.status >= 400 && error.status < 500) { // Handle Client-side errors (e.g., 400 Bad Request, 403 Forbidden, 409 Conflict)
+                            // Server indicated invalid request, permission issue, or conflict. Prefer server message if available.
+                            displayMessage = error.message || `Error (${error.status}): Invalid input or permission issue.`;
+                            console.error("DEBUG: Post Animal Client error received:", error.status, displayMessage, 'Server Data:', error.data);
+
+                            // On 4xx client errors, likely due to input validation (if backend is well-behaved and returns 400),
+                            // re-add the was-validated class to trigger Bootstrap visual feedback on form elements.
+                             this.classList.add('was-validated'); // Add was-validated class
+
+                         } else if (error.status >= 500) { // Handle Server-side errors (e.g., 500 Internal Server Error)
+                             displayMessage = error.message || `Server Error (${error.status}): An internal server issue occurred. Please try again.`;
+                              console.error("DEBUG: Post Animal Server error received:", error.status, displayMessage);
+                             // Do NOT add was-validated for 5xx errors.
+                         } else {
+                             // Handle any other unexpected HTTP status codes
+                             displayMessage = error.message || `Response Status (${error.status}): Unhandled server response status.`;
+                              console.error("DEBUG: Post Animal Unhandled response status:", error.status, error);
+                         }
+                     } else {
+                         // This branch catches errors where no status code was received: network issues, Fetch errors, JS errors before response.
+                          displayMessage = 'Could not connect to the server or a network issue occurred. Please check your internet connection and try again.';
+                          console.error("DEBUG: Post Animal Network or non-HTTP error:", error);
+                      }
+
+                    // Display the determined error message to the user in the feedback area for this form
+                    if(postAnimalFeedback) postAnimalFeedback.innerHTML = '<div class="alert alert-danger small p-2" role="alert">' + displayMessage + '</div>';
+
+                    // Re-enable the form elements so the user can try again.
+                    // This happens unless a redirect occurred for 401.
+                    setPostAnimalFormState(false, 'POST ANIMAL FOR ADOPTION'); // Set disabled back to false, reset button text
+
+
+                } // End of Post Animal Submit Catch block
+            }); // End of postAnimalForm submit event listener
+        } else {
+            // This block runs on page load if the postAnimalForm element is not found (user not logged in)
+            // console.log("DEBUG: Post Animal form '#postAnimalForm' not found on load (user likely not logged in).");
+         }
+
+
+         // --- Optional: Helper function to simulate Flask flash message using JS ---
+         // This function creates Bootstrap alerts dynamically on the page for AJAX response feedback.
+         // Checking if it exists avoids conflicts if defined elsewhere globally (e.g., in a shared JS file).
+         if (typeof flashMessage !== 'function') {
+             window.flashMessage = function(category, message) {
+                  const flashContainer = document.querySelector('.flash-container.container'); // Select the flash area in base.html
+                  if (flashContainer) {
+                       // Create a new div for the alert
+                       const alertDiv = document.createElement('div');
+                       // Set Bootstrap classes for alert appearance, using category for color, making it small
+                       alertDiv.className = `alert alert-${category} alert-dismissible fade show small p-2`;
+                       alertDiv.role = 'alert'; // ARIA role for accessibility
+
+                       // Set the content (message and close button)
+                       alertDiv.innerHTML = `
+                            ${message}
+                            <button type="button" class="btn-close btn-sm p-2" data-bs-dismiss="alert" aria-label="Close"></button> {# Smaller close button #}
+                       `;
+
+                       // Insert the new alert at the beginning of the container
+                       flashContainer.insertBefore(alertDiv, flashContainer.firstChild);
+
+                       // Optional: Add auto-dismiss functionality
+                       // This requires Bootstrap JS loaded correctly for `data-bs-dismiss` or to use `bootstrap.Alert.getInstance`.
+                       // If Bootstrap JS is working, you can auto-hide:
+                       // setTimeout(() => {
+                       //     const alertInstance = bootstrap.Alert.getInstance(alertDiv);
+                       //     if (alertInstance) {
+                       //         alertInstance.close(); // Use Bootstrap's animated close
+                       //     } else {
+                       //         alertDiv.remove(); // Fallback if Bootstrap JS or instance not found
+                       //     }
+                       // }, 8000); // Auto-dismiss after 8 seconds
+
+
+                 } else {
+                      // Fallback if the flash container element isn't found
+                     console.warn(`DEBUG: JS Flash: Cannot find flash container. Message: ${message}`); // Warn and log to console
+                 }
+             } // End of window.flashMessage function definition
+         } // End of if (typeof flashMessage !== 'function') check
+
+
+         // Check and log Bootstrap JS loading and Modal component availability on initial page load
+         if (typeof bootstrap !== 'undefined') {
+             console.log("DEBUG: Bootstrap JS object found on load.");
+             if (typeof bootstrap.Modal !== 'undefined') {
+                  console.log("DEBUG: Bootstrap Modal component is AVAILABLE on load.");
+             } else {
+                 console.error("ERROR: Bootstrap JS loaded, but Modal component is NOT available. Modal may not function correctly.");
+             }
+         } else {
+             console.error("ERROR: Bootstrap JS (bootstrap.bundle.min.js) is NOT loaded or not available globally on load. Modals will not work.");
+         }
+
+
+    </script>
+{% endblock %}
