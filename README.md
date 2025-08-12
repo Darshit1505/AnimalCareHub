@@ -321,5 +321,6 @@ This project is open-sourced under the MIT License. See the LICENSE.md file in t
 Contact
 Feel free to connect with me for any questions or collaborations:
 GitHub: https://github.com/Darshit1505
-Email: darshitrupareliya15@gmail.com#   A n i m a l C a r e H u b  
+Email: darshitrupareliya15@gmail.com#   A n i m a l C a r e H u b 
+ 
  
